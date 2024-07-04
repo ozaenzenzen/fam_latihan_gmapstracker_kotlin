@@ -79,6 +79,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.btnStart.setOnClickListener {
             if (!isTracking) {
+                clearMaps()
                 updateTrackingStatus(true)
                 startLocationUpdates()
             } else {
@@ -114,6 +115,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onPause() {
         super.onPause()
         stopLocationUpdates()
+    }
+
+    private fun clearMaps() {
+        mMap.clear()
+        allLatLng.clear()
+        boundsBuilder = LatLngBounds.Builder()
     }
 
     private fun createLocationCallback() {
