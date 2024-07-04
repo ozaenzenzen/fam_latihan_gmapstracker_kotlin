@@ -3,6 +3,7 @@ package com.example.mylocationtracker
 import android.content.IntentSender
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -41,6 +42,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var isTracking = false
     private lateinit var locationCallback: LocationCallback
+
+    private var allLatLng = ArrayList<LatLng>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,6 +119,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
                     Log.d(TAG, "onLocationResult: " + location.latitude + ", " + location.longitude)
+
+                    val lastLatLng = LatLng(location.latitude, location.longitude)
+
+                    allLatLng.add(lastLatLng)
+                    mMap.addPolyline(
+                        PolylineOptions()
+                            .color(Color.CYAN)
+                            .width(10f)
+                            .addAll(allLatLng)
+                    )
                 }
             }
         }
