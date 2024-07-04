@@ -1,23 +1,31 @@
 package com.example.mylocationtracker
 
+import android.content.IntentSender
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.PolylineOptions
 import com.example.mylocationtracker.databinding.ActivityMapsBinding
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import java.util.concurrent.TimeUnit
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -25,6 +33,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var binding: ActivityMapsBinding
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+        private lateinit var locationRequest: com.google.android.gms.location.LocationRequest
+//    private lateinit var locationRequest: android.location.LocationRequest
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,7 +63,63 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
-        getMyLastLocation()
+        // getMyLastLocation()
+        createLocationRequest()
+    }
+
+    private val resolutionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult()
+        ) { result ->
+            when (result.resultCode) {
+                RESULT_OK ->
+                    Log.i(TAG, "onActivityResult: All location settings are satisfied.")
+
+                RESULT_CANCELED ->
+                    Toast.makeText(
+                        this@MapsActivity,
+                        "Anda harus mengaktifkan GPS untuk menggunakan aplikasi ini!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+            }
+        }
+
+    private fun createLocationRequest() {
+        val priority = com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+        val interval = TimeUnit.SECONDS.toMillis(1)
+        val maxWaitTime = TimeUnit.SECONDS.toMillis(1)
+        locationRequest = com.google.android.gms.location.LocationRequest.create()
+            .setInterval(interval)
+            .setPriority(priority)
+            .setMaxWaitTime(maxWaitTime);
+//        locationRequest = android.location.LocationRequest.Builder(
+//            priority,
+//            interval
+//        ).apply {
+//            setMaxUpdateDelayMillis(maxWaitTime)
+//        }.build()
+        val builder = LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+        val client = LocationServices.getSettingsClient(this)
+        client.checkLocationSettings(builder.build())
+            .addOnSuccessListener {
+                getMyLastLocation()
+            }
+            .addOnFailureListener { exception ->
+                if (exception is ResolvableApiException) {
+                    try {
+                        resolutionLauncher.launch(
+                            IntentSenderRequest.Builder(exception.resolution).build()
+                        )
+                    } catch (sendEx: IntentSender.SendIntentException) {
+                        Toast.makeText(this@MapsActivity, sendEx.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+    }
+
+    companion object {
+        private const val TAG = "MapsActivity"
     }
 
     private val requestPermissionLauncher =
