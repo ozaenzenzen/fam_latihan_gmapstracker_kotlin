@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
@@ -23,6 +24,8 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 import com.example.mylocationtracker.databinding.ActivityMapsBinding
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import java.util.concurrent.TimeUnit
@@ -34,8 +37,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
-        private lateinit var locationRequest: com.google.android.gms.location.LocationRequest
-//    private lateinit var locationRequest: android.location.LocationRequest
+    private lateinit var locationRequest: com.google.android.gms.location.LocationRequest
+
+    private var isTracking = false
+    private lateinit var locationCallback: LocationCallback
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +70,64 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // getMyLastLocation()
         createLocationRequest()
+        createLocationCallback()
+
+        binding.btnStart.setOnClickListener {
+            if (!isTracking) {
+                updateTrackingStatus(true)
+                startLocationUpdates()
+            } else {
+                updateTrackingStatus(false)
+                stopLocationUpdates()
+            }
+        }
+    }
+
+    private fun startLocationUpdates() {
+        try {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+        } catch (exception: SecurityException) {
+            Log.e(TAG, "Error : " + exception.message)
+        }
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isTracking) {
+            startLocationUpdates()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopLocationUpdates()
+    }
+
+    private fun createLocationCallback() {
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                for (location in locationResult.locations) {
+                    Log.d(TAG, "onLocationResult: " + location.latitude + ", " + location.longitude)
+                }
+            }
+        }
+    }
+
+    private fun updateTrackingStatus(newStatus: Boolean) {
+        isTracking = newStatus
+        if (isTracking) {
+            binding.btnStart.text = getString(R.string.stop_running)
+        } else {
+            binding.btnStart.text = getString(R.string.start_running)
+        }
     }
 
     private val resolutionLauncher =
