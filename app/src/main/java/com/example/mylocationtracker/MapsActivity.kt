@@ -45,6 +45,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var allLatLng = ArrayList<LatLng>()
 
+    private var boundsBuilder = LatLngBounds.Builder()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -129,6 +131,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                             .width(10f)
                             .addAll(allLatLng)
                     )
+
+                    boundsBuilder.include(lastLatLng)
+                    val bounds: LatLngBounds = boundsBuilder.build()
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64))
                 }
             }
         }
